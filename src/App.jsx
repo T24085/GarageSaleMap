@@ -15,7 +15,7 @@ import Filters from './components/Filters.jsx';
 import MapView from './components/Map.jsx';
 import SaleCard from './components/SaleCard.jsx';
 import SaleForm from './components/SaleForm.jsx';
-import AuthButton from './components/AuthButton.jsx';
+import AuthPanel from './components/AuthPanel.jsx';
 import { auth, db } from './firebase';
 
 function toDate(value) {
@@ -152,7 +152,7 @@ export default function App() {
           <h1 style={styles.title}>Garage Sales Map</h1>
           <p style={styles.subtitle}>A community map for discovering garage sales nearby.</p>
         </div>
-        <AuthButton user={user} disabled={authBusy} />
+        <AuthPanel user={user} disabled={authBusy} />
       </header>
       <main style={styles.main}>
         <section style={styles.leftPane}>

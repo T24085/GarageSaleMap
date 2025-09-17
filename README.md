@@ -13,7 +13,7 @@ A React + Firebase web app for crowdsourcing garage sales and showing them on an
 ### Prerequisites
 - Node.js 20+ (local dev works on newer, deployment targets Node 20)
 - Firebase CLI `npm install -g firebase-tools`
-- A Firebase project with Firestore, Authentication (Google sign-in), Storage, and Cloud Functions enabled
+- A Firebase project with Firestore, Authentication (Email/Password enabled), Storage, and Cloud Functions
 - MapTiler account for tiles and geocoding (free tier is sufficient)
 
 ### Installation
@@ -38,16 +38,16 @@ VITE_BASE_PATH=/
 ```
 - Leave `VITE_BASE_PATH=/` for Firebase/local.
 - When building for GitHub Pages set `VITE_BASE_PATH=/GarageSaleMap/` (or the repo name).
-- If you skip `VITE_FIREBASE_STORAGE` locally, the default `${VITE_FIREBASE_PROJECT_ID}.firebasestorage.app` is used.
+- If you skip `VITE_FIREBASE_STORAGE`, the default `${VITE_FIREBASE_PROJECT_ID}.firebasestorage.app` is used.
 
 ### Firebase Configuration Checklist
-- Enable **Google** as a Sign-in method and add your hosting domains under Authorized Domains (include `localhost` + `t24085.github.io` if you keep using Pages).
-- Create the following Firestore collection security rules (`firestore.rules`).
-- Configure the MapTiler key for Cloud Functions:
+- Authentication → Sign-in method: enable **Email/Password**. (Optional: add Google later.)
+- Authentication → Settings → Authorized domains: add `localhost` and `t24085.github.io` (or your custom domains).
+- Firestore rules defined in `firestore.rules`.
+- Cloud Functions: configure the MapTiler key for geocoding.
   ```bash
   firebase functions:config:set maptiler.key="YOUR_MAPTILER_KEY"
   ```
-  The React app reads the key from `.env` (for MapLibre tiles), while Cloud Functions use runtime config for geocoding.
 
 ### Available Scripts
 - `npm run dev` - start Vite dev server
@@ -55,7 +55,7 @@ VITE_BASE_PATH=/
 - `npm run preview` - preview production build
 - `npm run lint` - run ESLint across the project
 
-Posting a sale requires signing in with Google. New sales are written to Firestore, geocoded server-side, and appear on the map with privacy offsets until they go live if the toggle is checked.
+Posting a sale requires signing in. The header auth widget lets people register or sign in with email/password; once authenticated they can submit the sale form.
 
 ## Firebase
 - Firestore rules stored in `firestore.rules`
@@ -69,7 +69,7 @@ firebase emulators:start
 ```
 
 ## GitHub Pages Preview
-A separate workflow (`.github/workflows/pages.yml`) builds the app with `VITE_BASE_PATH=/GarageSaleMap/` and publishes `dist/` to GitHub Pages. Enable Pages in repo settings with "GitHub Actions" as the source and set repository secrets for the Firebase config (see CI/CD below). If you omit `VITE_FIREBASE_STORAGE`, the workflow derives `${VITE_FIREBASE_PROJECT_ID}.firebasestorage.app` automatically.
+Workflow `.github/workflows/pages.yml` builds the app with `VITE_BASE_PATH=/GarageSaleMap/` and publishes `dist/` to GitHub Pages. Enable Pages in repo settings with "GitHub Actions" as the source and set repository secrets for the Firebase config (see CI/CD below). If you omit `VITE_FIREBASE_STORAGE`, the workflow derives `${VITE_FIREBASE_PROJECT_ID}.firebasestorage.app` automatically.
 
 ## Cloud Functions Summary
 - `onSaleCreate` geocodes new sales via MapTiler (with caching in `geocache/`) and writes `loc` + `geohash`
