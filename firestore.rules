@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function authed() { return request.auth != null; }
+
+    match /sales/{id} {
+      allow read: if true;
+      allow create: if authed()
+        && request.resource.data.title is string
+        && request.resource.data.address is string
+        && request.resource.data.startsAt is timestamp
+        && request.resource.data.endsAt is timestamp;
+      allow update, delete: if authed() && request.auth.uid == resource.data.ownerUid;
+    }
+  }
+}
