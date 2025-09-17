@@ -68,7 +68,7 @@ firebase emulators:start
 ```
 
 ## GitHub Pages Preview
-A separate workflow (`.github/workflows/pages.yml`) builds the app with `VITE_BASE_PATH=/GarageSaleMap/` and publishes `dist/` to GitHub Pages. Enable Pages in repo settings with "GitHub Actions" as the source.
+A separate workflow (`.github/workflows/pages.yml`) builds the app with `VITE_BASE_PATH=/GarageSaleMap/` and publishes `dist/` to GitHub Pages. Enable Pages in repo settings with "GitHub Actions" as the source and set repository secrets for the Firebase config (see CI/CD below).
 
 ## Cloud Functions Summary
 - `onSaleCreate` geocodes new sales via MapTiler (with caching in `geocache/`) and writes `loc` + `geohash`
@@ -81,7 +81,14 @@ GitHub Actions workflows:
 
 Add these GitHub secrets:
 - `FIREBASE_PROJECT_ID`
-- `FIREBASE_SERVICE_ACCOUNT` (JSON for a service account with Firebase Admin + Hosting Admin + Functions Admin roles)
+- `FIREBASE_SERVICE_ACCOUNT`
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE`
+- `VITE_FIREBASE_MSG_SENDER`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_MAPTILER_KEY` (optional for tiles)
 
 ## Project Structure
 ```
