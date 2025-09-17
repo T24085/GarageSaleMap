@@ -38,6 +38,7 @@ VITE_BASE_PATH=/
 ```
 - Leave `VITE_BASE_PATH=/` for Firebase/local.
 - When building for GitHub Pages set `VITE_BASE_PATH=/GarageSaleMap/` (or the repo name).
+- If you skip `VITE_FIREBASE_STORAGE` locally, the default `${VITE_FIREBASE_PROJECT_ID}.firebasestorage.app` is used.
 
 ### Firebase Configuration Checklist
 - Enable **Google** as a Sign-in method and add your hosting domains under Authorized Domains (include `localhost` + `t24085.github.io` if you keep using Pages).
@@ -68,7 +69,7 @@ firebase emulators:start
 ```
 
 ## GitHub Pages Preview
-A separate workflow (`.github/workflows/pages.yml`) builds the app with `VITE_BASE_PATH=/GarageSaleMap/` and publishes `dist/` to GitHub Pages. Enable Pages in repo settings with "GitHub Actions" as the source and set repository secrets for the Firebase config (see CI/CD below).
+A separate workflow (`.github/workflows/pages.yml`) builds the app with `VITE_BASE_PATH=/GarageSaleMap/` and publishes `dist/` to GitHub Pages. Enable Pages in repo settings with "GitHub Actions" as the source and set repository secrets for the Firebase config (see CI/CD below). If you omit `VITE_FIREBASE_STORAGE`, the workflow derives `${VITE_FIREBASE_PROJECT_ID}.firebasestorage.app` automatically.
 
 ## Cloud Functions Summary
 - `onSaleCreate` geocodes new sales via MapTiler (with caching in `geocache/`) and writes `loc` + `geohash`
@@ -85,9 +86,9 @@ Add these GitHub secrets:
 - `VITE_FIREBASE_API_KEY`
 - `VITE_FIREBASE_AUTH_DOMAIN`
 - `VITE_FIREBASE_PROJECT_ID`
-- `VITE_FIREBASE_STORAGE`
 - `VITE_FIREBASE_MSG_SENDER`
 - `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_STORAGE` *(optional – defaults to `${VITE_FIREBASE_PROJECT_ID}.firebasestorage.app`)*
 - `VITE_MAPTILER_KEY` (optional for tiles)
 
 ## Project Structure

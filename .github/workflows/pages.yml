@@ -27,14 +27,29 @@ jobs:
       VITE_MAPTILER_KEY: ${{ secrets.VITE_MAPTILER_KEY }}
       VITE_BASE_PATH: /GarageSaleMap/
     steps:
+      - name: Derive optional config
+        id: derive
+        run: |
+          if [ -z "$VITE_FIREBASE_PROJECT_ID" ]; then
+            echo "Missing VITE_FIREBASE_PROJECT_ID secret" >&2
+            exit 1
+          fi
+          if [ -z "$VITE_FIREBASE_STORAGE" ]; then
+            echo "Using default storage bucket ${VITE_FIREBASE_PROJECT_ID}.firebasestorage.app"
+            echo "VITE_FIREBASE_STORAGE=${VITE_FIREBASE_PROJECT_ID}.firebasestorage.app" >> "$GITHUB_ENV"
+          else
+            echo "VITE_FIREBASE_STORAGE=$VITE_FIREBASE_STORAGE" >> "$GITHUB_ENV"
+          fi
+        shell: bash
+
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Verify configuration
         run: |
-          for key in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_STORAGE VITE_FIREBASE_MSG_SENDER VITE_FIREBASE_APP_ID; do
+          for key in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_MSG_SENDER VITE_FIREBASE_APP_ID VITE_FIREBASE_STORAGE; do
             if [ -z "${!key}" ]; then
-              echo "Missing required secret: $key" >&2
+              echo "Missing required value: $key" >&2
               exit 1
             fi
           done
