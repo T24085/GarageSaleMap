@@ -1,25 +1,65 @@
+function formatDateTime(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function buildDirectionsUrl(sale) {
+  if (sale?.loc?.lat && sale?.loc?.lng) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${sale.loc.lat},${sale.loc.lng}`;
+  }
+  if (sale?.address) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sale.address)}`;
+  }
+  return null;
+}
+
+const statusLabel = {
+  upcoming: 'Upcoming',
+  live: 'Live',
+  ended: 'Ended',
+};
+
 export default function SaleCard({ sale, onSelect }) {
   if (!sale) {
     return null;
   }
 
+  const start = formatDateTime(sale.startsAt);
+  const end = formatDateTime(sale.endsAt);
+  const directionsUrl = buildDirectionsUrl(sale);
+  const label = statusLabel[sale.status] ?? 'Upcoming';
+
   return (
     <article style={styles.card}>
       <header style={styles.header}>
         <h3 style={styles.title}>{sale.title}</h3>
-        <span style={{ ...styles.badge, ...styles[sale.status ?? 'upcoming'] }}>{sale.status ?? 'upcoming'}</span>
+        <span style={{ ...styles.badge, ...styles[sale.status ?? 'upcoming'] }}>{label}</span>
       </header>
       <p style={styles.address}>{sale.address ?? 'Address coming soon'}</p>
-      {sale.startsAt && sale.endsAt ? (
+      {start && end ? (
         <p style={styles.times}>
-          {new Date(sale.startsAt).toLocaleString()} — {new Date(sale.endsAt).toLocaleString()}
+          {start} – {end}
         </p>
       ) : (
-        <p style={styles.times}>Schedule will appear after we sync to Firestore.</p>
+        <p style={styles.times}>Schedule pending.</p>
       )}
-      <button type="button" style={styles.button} onClick={onSelect}>
-        View on map
-      </button>
+      <div style={styles.actions}>
+        <button type="button" style={styles.button} onClick={onSelect}>
+          View on map
+        </button>
+        {directionsUrl ? (
+          <a href={directionsUrl} target="_blank" rel="noreferrer" style={styles.link}>
+            Directions
+          </a>
+        ) : null}
+      </div>
     </article>
   );
 }
@@ -28,7 +68,7 @@ const styles = {
   card: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.5rem',
+    gap: '0.6rem',
     padding: '1rem',
     borderRadius: '0.75rem',
     backgroundColor: '#f1f5f9',
@@ -52,8 +92,12 @@ const styles = {
     fontSize: '0.9rem',
     color: '#334155',
   },
+  actions: {
+    display: 'flex',
+    gap: '0.75rem',
+    alignItems: 'center',
+  },
   button: {
-    alignSelf: 'flex-start',
     padding: '0.5rem 0.85rem',
     borderRadius: '999px',
     border: '1px solid #ef4444',
@@ -61,6 +105,12 @@ const styles = {
     color: '#ef4444',
     fontWeight: 600,
     cursor: 'pointer',
+  },
+  link: {
+    fontSize: '0.9rem',
+    color: '#1d4ed8',
+    textDecoration: 'none',
+    fontWeight: 600,
   },
   badge: {
     padding: '0.25rem 0.65rem',

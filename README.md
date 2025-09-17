@@ -20,7 +20,7 @@ A React + Firebase web app for crowdsourcing garage sales and showing them on an
 ```bash
 npm install
 cp .env.example .env
-# Fill in the Firebase web config and MapTiler key in .env
+# Fill in the Firebase web config, MapTiler key, and base path in .env
 npm run dev
 ```
 The dev server runs on `http://localhost:5173` by default.
@@ -39,17 +39,22 @@ VITE_BASE_PATH=/
 - Leave `VITE_BASE_PATH=/` for Firebase/local.
 - When building for GitHub Pages set `VITE_BASE_PATH=/GarageSaleMap/` (or the repo name).
 
-For Cloud Functions, configure the MapTiler key via Firebase runtime config:
-```bash
-firebase functions:config:set maptiler.key="YOUR_MAPTILER_KEY"
-```
-Or, when using service account JSON deployment, expose `MAPTILER_KEY` inside your workflow/secrets.
+### Firebase Configuration Checklist
+- Enable **Google** as a Sign-in method and add your hosting domains under Authorized Domains (include `localhost` + `t24085.github.io` if you keep using Pages).
+- Create the following Firestore collection security rules (`firestore.rules`).
+- Configure the MapTiler key for Cloud Functions:
+  ```bash
+  firebase functions:config:set maptiler.key="YOUR_MAPTILER_KEY"
+  ```
+  The React app reads the key from `.env` (for MapLibre tiles), while Cloud Functions use runtime config for geocoding.
 
 ### Available Scripts
-- `npm run dev` — start Vite dev server
-- `npm run build` — production build (outputs to `dist/`)
-- `npm run preview` — preview production build
-- `npm run lint` — run ESLint across the project
+- `npm run dev` - start Vite dev server
+- `npm run build` - production build (outputs to `dist/`)
+- `npm run preview` - preview production build
+- `npm run lint` - run ESLint across the project
+
+Posting a sale requires signing in with Google. New sales are written to Firestore, geocoded server-side, and appear on the map with privacy offsets until they go live if the toggle is checked.
 
 ## Firebase
 - Firestore rules stored in `firestore.rules`
@@ -71,8 +76,8 @@ A separate workflow (`.github/workflows/pages.yml`) builds the app with `VITE_BA
 
 ## CI/CD
 GitHub Actions workflows:
-- `.github/workflows/deploy.yml` — Firebase Hosting/Functions deploy (PR previews + main)
-- `.github/workflows/pages.yml` — GitHub Pages static preview build
+- `.github/workflows/deploy.yml` - Firebase Hosting/Functions deploy (PR previews + main)
+- `.github/workflows/pages.yml` - GitHub Pages static preview build
 
 Add these GitHub secrets:
 - `FIREBASE_PROJECT_ID`
@@ -94,9 +99,10 @@ Add these GitHub secrets:
 ├── firebase.json
 ├── .firebaserc
 ├── .env.example
-└── .github/workflows/
-    ├── deploy.yml
-    └── pages.yml
+├── .github/workflows/
+│   ├── deploy.yml
+│   └── pages.yml
+└── PROJECT_PLAN.md
 ```
 
 ## Roadmap
