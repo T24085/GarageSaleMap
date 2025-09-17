@@ -34,7 +34,10 @@ VITE_FIREBASE_STORAGE=
 VITE_FIREBASE_MSG_SENDER=
 VITE_FIREBASE_APP_ID=
 VITE_MAPTILER_KEY=
+VITE_BASE_PATH=/
 ```
+- Leave `VITE_BASE_PATH=/` for Firebase/local.
+- When building for GitHub Pages set `VITE_BASE_PATH=/GarageSaleMap/` (or the repo name).
 
 For Cloud Functions, configure the MapTiler key via Firebase runtime config:
 ```bash
@@ -59,18 +62,21 @@ Run emulators (optional):
 firebase emulators:start
 ```
 
+## GitHub Pages Preview
+A separate workflow (`.github/workflows/pages.yml`) builds the app with `VITE_BASE_PATH=/GarageSaleMap/` and publishes `dist/` to GitHub Pages. Enable Pages in repo settings with "GitHub Actions" as the source.
+
 ## Cloud Functions Summary
 - `onSaleCreate` geocodes new sales via MapTiler (with caching in `geocache/`) and writes `loc` + `geohash`
 - `updateStatuses` runs every 15 minutes to transition sales between `upcoming`, `live`, and `ended`
 
 ## CI/CD
-GitHub Actions workflow (`.github/workflows/deploy.yml`):
-- Pull requests deploy to a temporary Firebase Hosting preview channel
-- Merges to `main` deploy Hosting, Functions, Firestore rules, and Storage rules
+GitHub Actions workflows:
+- `.github/workflows/deploy.yml` — Firebase Hosting/Functions deploy (PR previews + main)
+- `.github/workflows/pages.yml` — GitHub Pages static preview build
 
 Add these GitHub secrets:
 - `FIREBASE_PROJECT_ID`
-- `FIREBASE_SERVICE_ACCOUNT` (JSON string for a service account with Firebase Admin + Hosting Admin + Functions Admin roles)
+- `FIREBASE_SERVICE_ACCOUNT` (JSON for a service account with Firebase Admin + Hosting Admin + Functions Admin roles)
 
 ## Project Structure
 ```
@@ -88,7 +94,9 @@ Add these GitHub secrets:
 ├── firebase.json
 ├── .firebaserc
 ├── .env.example
-└── .github/workflows/deploy.yml
+└── .github/workflows/
+    ├── deploy.yml
+    └── pages.yml
 ```
 
 ## Roadmap
