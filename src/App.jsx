@@ -31,6 +31,8 @@ function toDate(value) {
   return new Date(value);
 }
 
+const ZIP_CODE_PATTERN = /^\d{5}(?:-?\d{4})?$/;
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [authBusy, setAuthBusy] = useState(true);
@@ -115,6 +117,9 @@ export default function App() {
 
     const startsAtDate = values.startsAt ? new Date(values.startsAt) : null;
     const endsAtDate = values.endsAt ? new Date(values.endsAt) : null;
+    const addressLine = values.address ? values.address.trim() : '';
+    const state = typeof values.state === 'string' ? values.state.trim().toUpperCase() : '';
+    const zipInput = values.zip ? values.zip.trim() : '';
 
     if (!startsAtDate || Number.isNaN(startsAtDate.getTime())) {
       throw new Error('Select a valid start date/time.');
@@ -126,10 +131,31 @@ export default function App() {
       throw new Error('End time must be after the start time.');
     }
 
+    if (!addressLine) {
+      throw new Error('Add a street address and city.');
+    }
+
+    if (!state) {
+      throw new Error('Select a state.');
+    }
+
+    if (!zipInput || !ZIP_CODE_PATTERN.test(zipInput)) {
+      throw new Error('Enter a valid ZIP code.');
+    }
+
+    const normalizedZip = zipInput.replace(/\s+/g, '');
+    const cleanedAddress = addressLine.replace(/,\s*$/, '');
+    const locationLine = `${state} ${normalizedZip}`.trim();
+    const fullAddress = cleanedAddress
+      ? `${cleanedAddress}, ${locationLine}`.trim()
+      : locationLine;
+
     const payload = {
       title: values.title.trim(),
       description: values.description?.trim() || null,
-      address: values.address.trim(),
+      address: fullAddress,
+      state,
+      zip: normalizedZip,
       startsAt: Timestamp.fromDate(startsAtDate),
       endsAt: Timestamp.fromDate(endsAtDate),
       approxUntilLive: Boolean(values.approxUntilLive),
