@@ -82,8 +82,12 @@ export default function SaleForm({ disabled, onCreate }) {
     setStatus({ state: 'loading', message: 'Submitting…' });
 
     try {
-      await onCreate(values);
-      setStatus({ state: 'success', message: 'Sale created! It will appear after geocoding runs.' });
+      const result = await onCreate(values);
+      let successMessage = 'Sale created! We\'ll add it to the map once the address is located.';
+      if (result?.geocoded) {
+        successMessage = 'Sale created! It should appear on the map right away.';
+      }
+      setStatus({ state: 'success', message: successMessage });
       reset(defaultValues);
     } catch (error) {
       setStatus({ state: 'error', message: error.message || 'Something went wrong.' });
