@@ -31,6 +31,32 @@ function toDate(value) {
   return new Date(value);
 }
 
+function normalizeLocation(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value.lat === 'number' && typeof value.lng === 'number') {
+    return { lat: value.lat, lng: value.lng };
+  }
+
+  if (typeof value.latitude === 'number' && typeof value.longitude === 'number') {
+    return { lat: value.latitude, lng: value.longitude };
+  }
+
+  if (typeof value.toJSON === 'function') {
+    const json = value.toJSON();
+    if (json && typeof json.lat === 'number' && typeof json.lng === 'number') {
+      return { lat: json.lat, lng: json.lng };
+    }
+    if (json && typeof json.latitude === 'number' && typeof json.longitude === 'number') {
+      return { lat: json.latitude, lng: json.longitude };
+    }
+  }
+
+  return null;
+}
+
 const ZIP_CODE_PATTERN = /^\d{5}(?:-?\d{4})?$/;
 
 export default function App() {
@@ -63,9 +89,11 @@ export default function App() {
       (snapshot) => {
         const nextSales = snapshot.docs.map((doc) => {
           const data = doc.data();
+          const loc = normalizeLocation(data.loc);
           return {
             id: doc.id,
             ...data,
+            loc,
             startsAt: toDate(data.startsAt),
             endsAt: toDate(data.endsAt),
           };
