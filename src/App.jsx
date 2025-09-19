@@ -58,6 +58,7 @@ function normalizeLocation(value) {
   return null;
 }
 
+
 const MAPTILER_GEOCODER_URL = 'https://api.maptiler.com/geocoding';
 
 async function geocodeAddress(address) {
@@ -97,6 +98,7 @@ async function geocodeAddress(address) {
 
   return { status: 'success', location: { lat, lng } };
 }
+
 
 const ZIP_CODE_PATTERN = /^\d{5}(?:-?\d{4})?$/;
 
