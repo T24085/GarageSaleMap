@@ -17,6 +17,7 @@ import SaleCard from './components/SaleCard.jsx';
 import SaleForm from './components/SaleForm.jsx';
 import AuthPanel from './components/AuthPanel.jsx';
 import { auth, db } from './firebase';
+import { encodeGeohash } from './lib/geohash.js';
 
 function toDate(value) {
   if (!value) {
@@ -56,6 +57,48 @@ function normalizeLocation(value) {
 
   return null;
 }
+
+
+const MAPTILER_GEOCODER_URL = 'https://api.maptiler.com/geocoding';
+
+async function geocodeAddress(address) {
+  const key = import.meta.env.VITE_MAPTILER_KEY;
+  const trimmedAddress = address?.trim();
+
+  if (!trimmedAddress) {
+    return { status: 'skipped', location: null };
+  }
+
+  if (!key) {
+    console.warn('Skipping client-side geocoding because VITE_MAPTILER_KEY is not configured.');
+    return { status: 'skipped', location: null };
+  }
+
+  const url = `${MAPTILER_GEOCODER_URL}/${encodeURIComponent(trimmedAddress)}.json?key=${key}&limit=1`;
+
+  let response;
+  try {
+    response = await fetch(url);
+  } catch (error) {
+    console.error('Network error while contacting MapTiler geocoding API.', error);
+    throw new Error('Unable to reach the geocoding service. Check your connection and try again.');
+  }
+
+  if (!response.ok) {
+    console.error(`MapTiler geocoding failed: ${response.status} ${response.statusText}`);
+    throw new Error('The geocoding service responded with an error. Please try again shortly.');
+  }
+
+  const payload = await response.json();
+  const [lng, lat] = payload?.features?.[0]?.center ?? [];
+
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return { status: 'not_found', location: null };
+  }
+
+  return { status: 'success', location: { lat, lng } };
+}
+
 
 const ZIP_CODE_PATTERN = /^\d{5}(?:-?\d{4})?$/;
 
@@ -178,6 +221,17 @@ export default function App() {
       ? `${cleanedAddress}, ${locationLine}`.trim()
       : locationLine;
 
+    const geocodeResult = await geocodeAddress(fullAddress);
+
+    if (geocodeResult.status === 'not_found') {
+      throw new Error('We couldn’t find that address. Double-check the details and try again.');
+    }
+
+    const resolvedLocation = geocodeResult.status === 'success' ? geocodeResult.location : null;
+    const resolvedGeohash = resolvedLocation
+      ? encodeGeohash(resolvedLocation.lat, resolvedLocation.lng)
+      : null;
+
     const payload = {
       title: values.title.trim(),
       description: values.description?.trim() || null,
@@ -192,11 +246,20 @@ export default function App() {
       photos: [],
       ownerUid: user.uid,
       createdAt: serverTimestamp(),
-      loc: null,
-      geohash: null,
+      loc: resolvedLocation,
+      geohash: resolvedGeohash,
     };
 
+    if (resolvedLocation) {
+      payload.geocodedAt = serverTimestamp();
+    }
+
     await addDoc(collection(db, 'sales'), payload);
+
+    return {
+      geocoded: geocodeResult.status === 'success',
+      geocodeStatus: geocodeResult.status,
+    };
   };
 
   return (
