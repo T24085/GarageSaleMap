@@ -26,7 +26,7 @@ export const onSaleCreate = onDocumentCreated('sales/{saleId}', async (event) =>
     return;
   }
 
-  if (sale.loc?.lat && sale.loc?.lng) {
+  if (sale.loc?.lat != null && sale.loc?.lng != null) {
     return;
   }
 

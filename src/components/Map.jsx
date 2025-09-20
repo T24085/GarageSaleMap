@@ -22,15 +22,21 @@ function resolveStyleUrl() {
 }
 
 function toDisplayLocation(sale) {
-  if (!sale?.loc?.lng || !sale?.loc?.lat) {
+  if (sale?.loc?.lng == null || sale?.loc?.lat == null) {
+    return null;
+  }
+
+  const lat = Number(sale.loc.lat);
+  const lng = Number(sale.loc.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return null;
   }
 
   if (!sale.approxUntilLive || sale.status === 'live') {
-    return sale.loc;
+    return { lat, lng };
   }
 
-  const seed = sale.id ?? sale.address ?? `${sale.loc.lat}${sale.loc.lng}`;
+  const seed = sale.id ?? sale.address ?? `${lat}${lng}`;
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {
     hash = (hash * 31 + seed.charCodeAt(i)) & 0xffffffff;
@@ -40,11 +46,11 @@ function toDisplayLocation(sale) {
   const distanceMeters = 50 + ((hash >>> 11) % 60); // 50m – 110m offset
   const earthRadius = 6378137;
   const deltaLat = (distanceMeters * Math.cos(angle)) / earthRadius;
-  const deltaLng = (distanceMeters * Math.sin(angle)) / (earthRadius * Math.cos((sale.loc.lat * Math.PI) / 180));
+  const deltaLng = (distanceMeters * Math.sin(angle)) / (earthRadius * Math.cos((lat * Math.PI) / 180));
 
   return {
-    lat: sale.loc.lat + (deltaLat * 180) / Math.PI,
-    lng: sale.loc.lng + (deltaLng * 180) / Math.PI,
+    lat: lat + (deltaLat * 180) / Math.PI,
+    lng: lng + (deltaLng * 180) / Math.PI,
   };
 }
 
@@ -59,7 +65,8 @@ function popupHtml(sale) {
   });
 
   const dates = start && end ? `${dateFormatter.format(start)} – ${dateFormatter.format(end)}` : '';
-  const directionsUrl = sale.loc?.lat
+  const hasCoordinates = sale.loc?.lat != null && sale.loc?.lng != null;
+  const directionsUrl = hasCoordinates
     ? `https://www.google.com/maps/dir/?api=1&destination=${sale.loc.lat},${sale.loc.lng}`
     : sale.address
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sale.address)}`
