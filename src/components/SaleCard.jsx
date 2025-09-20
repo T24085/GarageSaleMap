@@ -11,7 +11,7 @@ function formatDateTime(date) {
 }
 
 function buildDirectionsUrl(sale) {
-  if (sale?.loc?.lat && sale?.loc?.lng) {
+  if (sale?.loc?.lat != null && sale?.loc?.lng != null) {
     return `https://www.google.com/maps/dir/?api=1&destination=${sale.loc.lat},${sale.loc.lng}`;
   }
   if (sale?.address) {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -22,15 +22,21 @@ function resolveStyleUrl() {
 }
 
 function toDisplayLocation(sale) {
-  if (!sale?.loc?.lng || !sale?.loc?.lat) {
+  if (sale?.loc?.lng == null || sale?.loc?.lat == null) {
+    return null;
+  }
+
+  const lat = Number(sale.loc.lat);
+  const lng = Number(sale.loc.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return null;
   }
 
   if (!sale.approxUntilLive || sale.status === 'live') {
-    return sale.loc;
+    return { lat, lng };
   }
 
-  const seed = sale.id ?? sale.address ?? `${sale.loc.lat}${sale.loc.lng}`;
+  const seed = sale.id ?? sale.address ?? `${lat}${lng}`;
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {
     hash = (hash * 31 + seed.charCodeAt(i)) & 0xffffffff;
@@ -40,11 +46,11 @@ function toDisplayLocation(sale) {
   const distanceMeters = 50 + ((hash >>> 11) % 60); // 50m – 110m offset
   const earthRadius = 6378137;
   const deltaLat = (distanceMeters * Math.cos(angle)) / earthRadius;
-  const deltaLng = (distanceMeters * Math.sin(angle)) / (earthRadius * Math.cos((sale.loc.lat * Math.PI) / 180));
+  const deltaLng = (distanceMeters * Math.sin(angle)) / (earthRadius * Math.cos((lat * Math.PI) / 180));
 
   return {
-    lat: sale.loc.lat + (deltaLat * 180) / Math.PI,
-    lng: sale.loc.lng + (deltaLng * 180) / Math.PI,
+    lat: lat + (deltaLat * 180) / Math.PI,
+    lng: lng + (deltaLng * 180) / Math.PI,
   };
 }
 
@@ -59,7 +65,8 @@ function popupHtml(sale) {
   });
 
   const dates = start && end ? `${dateFormatter.format(start)} – ${dateFormatter.format(end)}` : '';
-  const directionsUrl = sale.loc?.lat
+  const hasCoordinates = sale.loc?.lat != null && sale.loc?.lng != null;
+  const directionsUrl = hasCoordinates
     ? `https://www.google.com/maps/dir/?api=1&destination=${sale.loc.lat},${sale.loc.lng}`
     : sale.address
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sale.address)}`
@@ -79,6 +86,27 @@ export default function MapView({ sales, selectedSale }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
+  const selectedSaleRef = useRef(null);
+
+  const focusOnSale = useCallback((sale) => {
+    const map = mapRef.current;
+    if (!map || !sale) {
+      return;
+    }
+
+    const entry = markersRef.current.find((item) => item.id === sale.id);
+    if (!entry || !entry.position) {
+      return;
+    }
+
+    map.flyTo({
+      center: [entry.position.lng, entry.position.lat],
+      zoom: Math.max(map.getZoom(), 14),
+      essential: true,
+    });
+
+    entry.popup?.setLngLat([entry.position.lng, entry.position.lat]).addTo(map);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -114,40 +142,26 @@ export default function MapView({ sales, selectedSale }) {
       .map((sale) => ({ sale, position: toDisplayLocation(sale) }))
       .filter((entry) => entry.position)
       .forEach(({ sale, position }) => {
-        const popup = new maplibregl.Popup({ closeButton: false }).setHTML(popupHtml(sale));
+        const popup = new maplibregl.Popup({ closeButton: false })
+          .setLngLat([position.lng, position.lat])
+          .setHTML(popupHtml(sale));
         const marker = new maplibregl.Marker({ color: STATUS_COLORS[sale.status] ?? '#ef4444' })
           .setLngLat([position.lng, position.lat])
           .setPopup(popup)
           .addTo(map);
 
-        markersRef.current.push({ id: sale.id, marker, popup });
+        markersRef.current.push({ id: sale.id, marker, popup, position });
       });
-  }, [sales]);
+
+    if (selectedSaleRef.current) {
+      focusOnSale(selectedSaleRef.current);
+    }
+  }, [sales, focusOnSale]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !selectedSale) {
-      return;
-    }
-
-    const entry = markersRef.current.find((item) => item.id === selectedSale.id);
-    if (!entry) {
-      return;
-    }
-
-    const position = toDisplayLocation(selectedSale);
-    if (!position) {
-      return;
-    }
-
-    map.flyTo({
-      center: [position.lng, position.lat],
-      zoom: Math.max(map.getZoom(), 14),
-      essential: true,
-    });
-
-    entry.popup?.addTo(map);
-  }, [selectedSale]);
+    selectedSaleRef.current = selectedSale ?? null;
+    focusOnSale(selectedSale ?? null);
+  }, [selectedSale, focusOnSale]);
 
   return <div ref={containerRef} style={styles.mapContainer} />;
 }

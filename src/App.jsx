@@ -32,26 +32,178 @@ function toDate(value) {
   return new Date(value);
 }
 
-function normalizeLocation(value) {
-  if (!value) {
+function coerceCoordinate(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function isValidLatitude(value) {
+  return typeof value === 'number' && value >= -90 && value <= 90;
+}
+
+function isValidLongitude(value) {
+  return typeof value === 'number' && value >= -180 && value <= 180;
+}
+
+function extractLatLng(candidate) {
+  if (!candidate || (typeof candidate !== 'object' && typeof candidate !== 'function')) {
     return null;
   }
 
-  if (typeof value.lat === 'number' && typeof value.lng === 'number') {
-    return { lat: value.lat, lng: value.lng };
-  }
+  const latKeys = ['lat', 'latitude', '_lat', '_latitude', 'y', 'Y', 'Lat', 'Latitude'];
+  const lngKeys = [
+    'lng',
+    'lon',
+    'long',
+    'longitude',
+    '_lng',
+    '_long',
+    '_longitude',
+    'x',
+    'X',
+    'Lng',
+    'Lon',
+    'Long',
+    'Longitude',
+  ];
 
-  if (typeof value.latitude === 'number' && typeof value.longitude === 'number') {
-    return { lat: value.latitude, lng: value.longitude };
-  }
-
-  if (typeof value.toJSON === 'function') {
-    const json = value.toJSON();
-    if (json && typeof json.lat === 'number' && typeof json.lng === 'number') {
-      return { lat: json.lat, lng: json.lng };
+  let lat = null;
+  for (const key of latKeys) {
+    if (key in candidate) {
+      lat = coerceCoordinate(candidate[key]);
+      if (lat != null) {
+        break;
+      }
     }
-    if (json && typeof json.latitude === 'number' && typeof json.longitude === 'number') {
-      return { lat: json.latitude, lng: json.longitude };
+  }
+
+  let lng = null;
+  for (const key of lngKeys) {
+    if (key in candidate) {
+      lng = coerceCoordinate(candidate[key]);
+      if (lng != null) {
+        break;
+      }
+    }
+  }
+
+  if (lat == null || lng == null) {
+    return null;
+  }
+
+  if (!isValidLatitude(lat) || !isValidLongitude(lng)) {
+    return null;
+  }
+
+  return { lat, lng };
+}
+
+function normalizeLocation(value) {
+  return normalizeLocationImpl(value, new Set());
+}
+
+function normalizeLocationImpl(value, seen) {
+  if (value == null) {
+    return null;
+  }
+
+  const valueType = typeof value;
+  if ((valueType === 'object' || valueType === 'function') && value !== null) {
+    if (seen.has(value)) {
+      return null;
+    }
+    seen.add(value);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && parsed !== value) {
+        const fromJson = normalizeLocationImpl(parsed, seen);
+        if (fromJson) {
+          return fromJson;
+        }
+      }
+    } catch {
+      // Ignore JSON parse errors – the string is not JSON encoded.
+    }
+
+    const matches = trimmed.match(/-?\d+(?:\.\d+)?/g);
+    if (matches && matches.length >= 2) {
+      const first = coerceCoordinate(matches[0]);
+      const second = coerceCoordinate(matches[1]);
+      if (first != null && second != null) {
+        if (isValidLatitude(first) && isValidLongitude(second)) {
+          return { lat: first, lng: second };
+        }
+        if (isValidLongitude(first) && isValidLatitude(second)) {
+          return { lat: second, lng: first };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length >= 2) {
+      const first = coerceCoordinate(value[0]);
+      const second = coerceCoordinate(value[1]);
+      if (first != null && second != null) {
+        if (isValidLatitude(first) && isValidLongitude(second)) {
+          return { lat: first, lng: second };
+        }
+        if (isValidLongitude(first) && isValidLatitude(second)) {
+          return { lat: second, lng: first };
+        }
+      }
+    }
+    return null;
+  }
+
+  const direct = extractLatLng(value);
+  if (direct) {
+    return direct;
+  }
+
+  if (value && typeof value === 'object') {
+    const nestedKeys = ['coordinates', 'coord', 'location', 'loc', 'position', 'point', 'geo', 'geopoint', 'center'];
+    for (const key of nestedKeys) {
+      if (key in value) {
+        const nested = normalizeLocationImpl(value[key], seen);
+        if (nested) {
+          return nested;
+        }
+      }
+    }
+
+    if (typeof value.toJSON === 'function') {
+      try {
+        const json = value.toJSON();
+        if (json && json !== value) {
+          const fromJson = normalizeLocationImpl(json, seen);
+          if (fromJson) {
+            return fromJson;
+          }
+        }
+      } catch {
+        // Ignore serialization errors.
+      }
     }
   }
 
