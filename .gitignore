@@ -1,9 +1,25 @@
+# Node
 node_modules
+server/node_modules
+web/node_modules
+
+# Build artifacts
 .dist
-build
 dist
+build
+*.log
+
+# Env files
 .env
+server/.env
+web/.env
+
+# macOS / Xcode
+.DS_Store
+DerivedData/
+xcuserdata/
+
+# Misc
 firebase-debug.log
 firebase-debug.*.log
 .vscode
-.DS_Store
